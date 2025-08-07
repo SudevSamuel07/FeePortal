@@ -74,25 +74,30 @@
                 <div class="bg-white p-6 md:p-8 rounded-xl shadow-md">
                     <form id="feeForm">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <!-- Student Name -->
+                            <!-- Receipt No. -->
                             <div>
-                                <label for="studentName" class="block mb-2 text-sm font-medium text-gray-700">Student Name</label>
-                                <input type="text" id="studentName" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="e.g., John Doe" required>
+                                <label for="receiptNo" class="block mb-2 text-sm font-medium text-gray-700">Receipt No.</label>
+                                <input type="number" id="receiptNo" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="e.g., 177" required>
                             </div>
-                            <!-- Batch -->
-                            <div>
-                                <label for="batch" class="block mb-2 text-sm font-medium text-gray-700">Batch</label>
-                                <input type="text" id="batch" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="e.g., 2024-2025" required>
+                             <!-- Student Name -->
+                             <div>
+                                <label for="studentName" class="block mb-2 text-sm font-medium text-gray-700">Student Name (with thanks from)</label>
+                                <input type="text" id="studentName" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="e.g., Ch. Latha Mary Jones II Dip. Th" required>
                             </div>
                             <!-- Amount Paid -->
                             <div>
-                                <label for="amountPaid" class="block mb-2 text-sm font-medium text-gray-700">Amount Paid ($)</label>
-                                <input type="number" id="amountPaid" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="e.g., 500" required>
+                                <label for="amountPaid" class="block mb-2 text-sm font-medium text-gray-700">Amount Paid (₹)</label>
+                                <input type="number" id="amountPaid" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="e.g., 800" required>
                             </div>
-                            <!-- Amount Due -->
-                            <div>
-                                <label for="amountDue" class="block mb-2 text-sm font-medium text-gray-700">Amount Due ($)</label>
-                                <input type="number" id="amountDue" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="e.g., 100" required>
+                             <!-- Amount in Words -->
+                             <div>
+                                <label for="amountInWords" class="block mb-2 text-sm font-medium text-gray-700">Amount in Words</label>
+                                <input type="text" id="amountInWords" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="e.g., Eight Hundred Only" required>
+                            </div>
+                            <!-- Towards -->
+                            <div class="md:col-span-2">
+                                <label for="towards" class="block mb-2 text-sm font-medium text-gray-700">Towards</label>
+                                <input type="text" id="towards" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" placeholder="e.g., Fee for the month of July" required>
                             </div>
                         </div>
                         <!-- Submit Button -->
@@ -115,10 +120,10 @@
                             <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                                 <tr>
                                     <th scope="col" class="px-6 py-3">Date</th>
+                                    <th scope="col" class="px-6 py-3">Receipt No.</th>
                                     <th scope="col" class="px-6 py-3">Student Name</th>
-                                    <th scope="col" class="px-6 py-3">Batch</th>
-                                    <th scope="col" class="px-6 py-3">Paid</th>
-                                    <th scope="col" class="px-6 py-3">Due</th>
+                                    <th scope="col" class="px-6 py-3">Amount</th>
+                                    <th scope="col" class="px-6 py-3">Towards</th>
                                     <th scope="col" class="px-6 py-3">Action</th>
                                 </tr>
                             </thead>
@@ -197,12 +202,8 @@
                 mainContent.innerHTML = `
                     <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-6 rounded-lg shadow-md" role="alert">
                         <h2 class="font-bold text-xl mb-2">Configuration Required</h2>
-                        <p class="mb-4">
-                            To connect to the database, you need to add your personal Firebase configuration keys to the code.
-                        </p>
-                        <p>
-                            Please follow the instructions in the code comments to create a free Firebase project and paste your unique <code>firebaseConfig</code> keys into the script section of this HTML file.
-                        </p>
+                        <p class="mb-4">To connect to the database, you need to add your personal Firebase configuration keys to the code.</p>
+                        <p>Please follow the instructions in the code comments to create a free Firebase project and paste your unique <code>firebaseConfig</code> keys into the script section of this HTML file.</p>
                     </div>
                 `;
                 return;
@@ -239,68 +240,97 @@
             
             function generatePDF(data) {
                 const doc = new jsPDF();
-                
-                doc.setFontSize(20);
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const centerX = pageWidth / 2;
+
+                // --- Header ---
+                doc.setFontSize(18);
                 doc.setFont("helvetica", "bold");
-                doc.text("Emmanuel School of Theology", doc.internal.pageSize.getWidth() / 2, 20, { align: 'center' });
+                doc.text("EMMANUEL SCHOOL OF THEOLOGY", centerX, 20, { align: 'center' });
+                
+                doc.setFontSize(10);
+                doc.setFont("helvetica", "normal");
+                doc.text("(A Telugu Bible School of AP District of SIAG)", centerX, 27, { align: 'center' });
+                doc.text("Regd. No. 2701, Under Societies Act - XXI1860, August 17, 1951, BOMBAY.", centerX, 32, { align: 'center' });
+                doc.text("Sangareddy, T.S. Ph: 9177704332, 9676709567", centerX, 37, { align: 'center' });
+                
+                // --- Line Separator ---
+                doc.setLineWidth(0.5);
+                doc.line(20, 42, pageWidth - 20, 42);
+
+                // --- Receipt Title ---
+                doc.setFontSize(12);
+                doc.setFont("helvetica", "bold");
+                doc.roundedRect(centerX - 15, 47, 30, 8, 3, 3, 'F'); // Filled rounded rectangle for "RECEIPT"
+                doc.setTextColor(255, 255, 255); // White text
+                doc.text("RECEIPT", centerX, 52.5, { align: 'center' });
+                doc.setTextColor(0, 0, 0); // Black text
+
+                // --- Receipt No. and Date ---
+                const date = new Date().toLocaleDateString('en-GB'); // DD/MM/YYYY format
                 doc.setFontSize(12);
                 doc.setFont("helvetica", "normal");
-                doc.text("Fee Payment Receipt", doc.internal.pageSize.getWidth() / 2, 30, { align: 'center' });
+                doc.text(`No. ${data.receiptNo}`, 20, 52);
+                doc.text(`Date: ${date}`, pageWidth - 50, 52);
 
-                // **FIX:** Use the client's current date for the PDF receipt.
-                // The server timestamp is still saved accurately in the database.
-                const date = new Date().toLocaleDateString('en-US', {
-                    year: 'numeric', month: 'long', day: 'numeric'
-                });
+                // --- Body ---
+                const startY = 70;
+                doc.text("Received the sum of Rupees", 20, startY);
+                doc.setFont("helvetica", "bold");
+                doc.text(data.amountInWords, 75, startY);
+                doc.setFont("helvetica", "normal");
+                doc.line(73, startY + 1, pageWidth - 20, startY + 1);
                 doc.setFontSize(10);
-                doc.text(`Date: ${date}`, 20, 45);
-
-                doc.autoTable({
-                    startY: 55,
-                    head: [['Description', 'Details']],
-                    body: [
-                        ['Student Name', data.name],
-                        ['Batch', data.batch],
-                        ['Amount Paid', `$${Number(data.paid).toFixed(2)}`],
-                        ['Amount Due', `$${Number(data.due).toFixed(2)}`],
-                    ],
-                    theme: 'striped',
-                    headStyles: { fillColor: [30, 58, 138] },
-                });
-
-                const pageCount = doc.internal.getNumberOfPages();
-                for(let i = 1; i <= pageCount; i++) {
-                    doc.setPage(i);
-                    doc.setFontSize(8);
-                    doc.setTextColor(150);
-                    doc.text('Thank you for your payment.', 20, doc.internal.pageSize.getHeight() - 10);
-                    doc.text(`Page ${i} of ${pageCount}`, doc.internal.pageSize.getWidth() - 30, doc.internal.pageSize.getHeight() - 10);
-                }
+                doc.text("(in words)", pageWidth - 40, startY + 5);
                 
-                doc.save(`Receipt-${data.name.replace(/\s/g, '_')}-${new Date().toISOString().slice(0,10)}.pdf`);
+                doc.setFontSize(12);
+                doc.text("with thanks from", 20, startY + 15);
+                doc.setFont("helvetica", "bold");
+                doc.text(data.name, 60, startY + 15);
+                doc.setFont("helvetica", "normal");
+                doc.line(58, startY + 16, pageWidth - 20, startY + 16);
+
+                doc.text("towards", 20, startY + 30);
+                doc.setFont("helvetica", "bold");
+                doc.text(data.towards, 45, startY + 30);
+                doc.setFont("helvetica", "normal");
+                doc.line(43, startY + 31, pageWidth - 20, startY + 31);
+                doc.text("for EMMANUEL SCHOOL OF THEOLOGY", centerX, startY + 38, { align: 'center' });
+
+                // --- Amount Box and Signature ---
+                doc.setLineWidth(0.5);
+                doc.rect(20, startY + 45, 50, 15); // Amount box
+                doc.setFontSize(16);
+                doc.setFont("helvetica", "bold");
+                doc.text(`₹ ${Number(data.paid).toFixed(2)}/-`, 25, startY + 55);
+
+                doc.setFontSize(12);
+                doc.setFont("helvetica", "normal");
+                doc.line(pageWidth - 60, startY + 55, pageWidth - 20, startY + 55);
+                doc.text("Business Manager", pageWidth - 60, startY + 60);
+
+                doc.save(`Receipt-${data.receiptNo}-${data.name.replace(/\s/g, '_')}.pdf`);
             }
 
             // --- Firestore Operations ---
-            
             feeForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 
                 const studentData = {
+                    receiptNo: document.getElementById('receiptNo').value,
                     name: document.getElementById('studentName').value,
-                    batch: document.getElementById('batch').value,
                     paid: document.getElementById('amountPaid').value,
-                    due: document.getElementById('amountDue').value,
+                    amountInWords: document.getElementById('amountInWords').value,
+                    towards: document.getElementById('towards').value,
                     createdAt: serverTimestamp()
                 };
 
                 try {
                     await addDoc(studentCollection, studentData);
-                    // Now that we know it's saved, show the correct message and generate the PDF.
                     showAlert("Success!", "Record saved and PDF is being generated.");
                     generatePDF(studentData);
                     feeForm.reset();
                 } catch (error) {
-                    // This will now only catch true saving errors.
                     console.error("Error adding document: ", error);
                     showAlert("Error", "Failed to save the record. Please try again.");
                 }
@@ -326,10 +356,10 @@
                     html += `
                         <tr class="bg-white border-b hover:bg-gray-50">
                             <td class="px-6 py-4">${date}</td>
+                            <td class="px-6 py-4">${student.receiptNo || 'N/A'}</td>
                             <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">${student.name}</th>
-                            <td class="px-6 py-4">${student.batch}</td>
-                            <td class="px-6 py-4 text-green-600 font-medium">$${Number(student.paid).toFixed(2)}</td>
-                            <td class="px-6 py-4 text-red-600 font-medium">$${Number(student.due).toFixed(2)}</td>
+                            <td class="px-6 py-4 text-green-600 font-medium">₹${Number(student.paid).toFixed(2)}</td>
+                            <td class="px-6 py-4">${student.towards || 'N/A'}</td>
                             <td class="px-6 py-4">
                                 <button data-id="${docSnap.id}" class="delete-btn font-medium text-red-600 hover:underline">Delete</button>
                             </td>
