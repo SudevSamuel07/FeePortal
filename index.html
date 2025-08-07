@@ -46,13 +46,37 @@
 </head>
 <body class="antialiased text-gray-800">
 
-    <!-- Main Container -->
-    <div id="main-content" class="container mx-auto p-4 md:p-8 max-w-4xl">
+    <!-- Login Screen -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gray-100">
+        <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
+            <h2 class="text-2xl font-bold text-center text-gray-900 mb-2">Emmanuel School of Theology</h2>
+            <p class="text-center text-gray-600 mb-6">Fee Management Portal</p>
+            <form id="loginForm" class="mb-4">
+                <div class="mb-4">
+                    <label for="username" class="block mb-2 text-sm font-medium text-gray-700">Username</label>
+                    <input type="text" id="username" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required>
+                </div>
+                <div class="mb-6">
+                    <label for="password" class="block mb-2 text-sm font-medium text-gray-700">Password</label>
+                    <input type="password" id="password" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required>
+                </div>
+                <p id="login-error" class="text-red-500 text-sm text-center mb-4 hidden">Invalid username or password.</p>
+                <button type="submit" class="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">Admin Login</button>
+            </form>
+            <div class="text-center">
+                 <button id="guest-login-btn" class="w-full text-blue-600 bg-white border border-blue-600 hover:bg-blue-50 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">Continue as Guest</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application Container (Initially hidden) -->
+    <div id="app-content" class="container mx-auto p-4 md:p-8 max-w-4xl hidden">
 
         <!-- Header -->
-        <header class="text-center mb-8">
+        <header class="text-center mb-8 relative">
             <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Emmanuel School of Theology</h1>
             <p class="text-md text-gray-600 mt-1">Student Fee Management Portal</p>
+            <button id="logout-btn" class="absolute top-0 right-0 text-sm text-red-600 hover:underline">Logout</button>
         </header>
 
         <!-- Tabs Navigation -->
@@ -194,39 +218,63 @@
             measurementId: "G-E2GXB35315"
         };
         
-        // --- Main Application Logic ---
-        function startApp() {
-            // --- Configuration Check ---
-            if (!firebaseConfig || !firebaseConfig.apiKey || firebaseConfig.apiKey.startsWith("YOUR_")) {
-                const mainContent = document.getElementById('main-content');
-                mainContent.innerHTML = `
-                    <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-6 rounded-lg shadow-md" role="alert">
-                        <h2 class="font-bold text-xl mb-2">Configuration Required</h2>
-                        <p class="mb-4">To connect to the database, you need to add your personal Firebase configuration keys to the code.</p>
-                        <p>Please follow the instructions in the code comments to create a free Firebase project and paste your unique <code>firebaseConfig</code> keys into the script section of this HTML file.</p>
-                    </div>
-                `;
-                return;
-            }
+        // --- UI Elements ---
+        const loginScreen = document.getElementById('login-screen');
+        const appContent = document.getElementById('app-content');
+        const loginForm = document.getElementById('loginForm');
+        const loginError = document.getElementById('login-error');
+        const guestLoginBtn = document.getElementById('guest-login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
 
-            // If config is valid, proceed with initialization
+        // --- Login Logic ---
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            // --- IMPORTANT: Change this password to something more secure! ---
+            const correctUsername = 'admin';
+            const correctPassword = 'password123'; 
+
+            if (username === correctUsername && password === correctPassword) {
+                loginScreen.classList.add('hidden');
+                appContent.classList.remove('hidden');
+                startApp('admin'); // Initialize the app in admin mode
+            } else {
+                loginError.classList.remove('hidden');
+            }
+        });
+
+        guestLoginBtn.addEventListener('click', () => {
+            loginScreen.classList.add('hidden');
+            appContent.classList.remove('hidden');
+            startApp('guest'); // Initialize the app in guest mode
+        });
+
+        logoutBtn.addEventListener('click', () => {
+            location.reload(); // Simple way to logout is to refresh the page
+        });
+
+        // --- Main Application Logic ---
+        function startApp(role) {
             const app = initializeApp(firebaseConfig);
             const db = getFirestore(app);
             const auth = getAuth(app);
+
+            // Determine the correct collection path based on user role
+            const collectionPath = role === 'admin' ? 'students_admin' : 'students_guest';
+            const studentCollection = collection(db, collectionPath);
 
             // --- Authentication ---
             async function authenticate() {
                 try {
                     await signInAnonymously(auth);
-                    console.log("Signed in anonymously");
+                    console.log(`Signed in anonymously for ${role} role.`);
                 } catch (error) {
                     console.error("Authentication failed:", error);
                     showAlert("Error", "Could not connect to the database. Please check your Firebase config and refresh the page.");
                 }
             }
-
-            // --- Firestore Collection Reference ---
-            const studentCollection = collection(db, "students");
 
             // --- UI Elements ---
             const feeForm = document.getElementById('feeForm');
@@ -261,13 +309,13 @@
                 // --- Receipt Title ---
                 doc.setFontSize(12);
                 doc.setFont("helvetica", "bold");
-                doc.roundedRect(centerX - 15, 47, 30, 8, 3, 3, 'F'); // Filled rounded rectangle for "RECEIPT"
-                doc.setTextColor(255, 255, 255); // White text
+                doc.roundedRect(centerX - 15, 47, 30, 8, 3, 3, 'F');
+                doc.setTextColor(255, 255, 255);
                 doc.text("RECEIPT", centerX, 52.5, { align: 'center' });
-                doc.setTextColor(0, 0, 0); // Black text
+                doc.setTextColor(0, 0, 0);
 
                 // --- Receipt No. and Date ---
-                const date = new Date().toLocaleDateString('en-GB'); // DD/MM/YYYY format
+                const date = new Date().toLocaleDateString('en-GB');
                 doc.setFontSize(12);
                 doc.setFont("helvetica", "normal");
                 doc.text(`No. ${data.receiptNo}`, 20, 52);
@@ -299,7 +347,7 @@
 
                 // --- Amount Box and Signature ---
                 doc.setLineWidth(0.5);
-                doc.rect(20, startY + 45, 50, 15); // Amount box
+                doc.rect(20, startY + 45, 50, 15);
                 doc.setFontSize(16);
                 doc.setFont("helvetica", "bold");
                 doc.text(`₹ ${Number(data.paid).toFixed(2)}/-`, 25, startY + 55);
@@ -434,7 +482,7 @@
             confirmDeleteBtn.addEventListener('click', async (e) => {
                 const id = e.target.dataset.id;
                 try {
-                    await deleteDoc(doc(db, "students", id));
+                    await deleteDoc(doc(db, collectionPath, id));
                     hideConfirmModal();
                     showAlert("Deleted!", "The record has been successfully deleted.");
                 } catch (error) {
@@ -447,9 +495,6 @@
             // --- Initial Load ---
             authenticate();
         }
-
-        // Run the application
-        startApp();
 
     </script>
 </body>
