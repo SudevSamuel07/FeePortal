@@ -311,43 +311,73 @@
             const historyContainer = document.getElementById('history-table-container');
             const noRecordsMessage = document.getElementById('no-records');
             // --- Logo preload for PDF & UI ---
-            let logoDataUrl = null; // original (square) if needed
-            let circularLogoDataUrl = null; // circular masked version
+            let logoDataUrl = null;              // square/base version
+            let circularLogoDataUrl = null;      // circular masked version (optional)
             let logoPromise = null;
-            function loadLogo(){
+            const loginLogoEl = document.getElementById('appLogoLogin');
+
+            function loadLogo() {
                 if (logoPromise) return logoPromise;
-                logoPromise = new Promise((resolve) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        try {
-                            // Base (unmasked) data URL
-                            const c = document.createElement('canvas');
-                            c.width = img.naturalWidth; c.height = img.naturalHeight;
-                            const ctx = c.getContext('2d');
-                            ctx.drawImage(img,0,0);
-                            logoDataUrl = c.toDataURL('image/png');
-                            // Create circular masked version
-                            const side = Math.min(img.naturalWidth, img.naturalHeight);
-                            const mc = document.createElement('canvas');
-                            mc.width = side; mc.height = side;
-                            const mctx = mc.getContext('2d');
-                            mctx.beginPath();
-                            mctx.arc(side/2, side/2, side/2, 0, Math.PI * 2);
-                            mctx.closePath();
-                            mctx.clip();
-                            // Center the image inside mask
-                            const offsetX = (side - img.naturalWidth)/2;
-                            const offsetY = (side - img.naturalHeight)/2;
-                            mctx.drawImage(img, offsetX, offsetY);
-                            circularLogoDataUrl = mc.toDataURL('image/png');
-                        } catch(e){
-                            console.warn('Canvas conversion failed, logo will not embed in PDF.', e);
+
+                const candidatePaths = [
+                    'logo.png',          // same folder
+                    './logo.png',
+                    '../logo.png',       // one level up (repo root case)
+                    '/logo.png'          // site root if served
+                ];
+
+                async function tryFetch(path) {
+                    try {
+                        const resp = await fetch(path, { cache: 'no-cache' });
+                        if (!resp.ok) return null;
+                        const blob = await resp.blob();
+                        return await new Promise(res => {
+                            const reader = new FileReader();
+                            reader.onload = () => res(reader.result);
+                            reader.readAsDataURL(blob);
+                        });
+                    } catch { return null; }
+                }
+
+                async function buildCircular(dataUrl) {
+                    return await new Promise(resolve => {
+                        const img = new Image();
+                        img.onload = () => {
+                            try {
+                                const side = Math.min(img.naturalWidth, img.naturalHeight);
+                                const c = document.createElement('canvas');
+                                c.width = side; c.height = side;
+                                const ctx = c.getContext('2d');
+                                ctx.beginPath();
+                                ctx.arc(side/2, side/2, side/2, 0, Math.PI * 2);
+                                ctx.closePath();
+                                ctx.clip();
+                                const offsetX = (side - img.naturalWidth)/2;
+                                const offsetY = (side - img.naturalHeight)/2;
+                                ctx.drawImage(img, offsetX, offsetY);
+                                resolve(c.toDataURL('image/png'));
+                            } catch {
+                                resolve(null);
+                            }
+                        };
+                        img.onerror = () => resolve(null);
+                        img.src = dataUrl;
+                    });
+                }
+
+                logoPromise = (async () => {
+                    for (const p of candidatePaths) {
+                        const data = await tryFetch(p);
+                        if (data) {
+                            logoDataUrl = data;
+                            if (loginLogoEl) loginLogoEl.src = p; // ensure UI logo uses the working path
+                            circularLogoDataUrl = await buildCircular(data) || null;
+                            console.log('Logo loaded from', p);
+                            return;
                         }
-                        resolve();
-                    };
-                    img.onerror = () => { console.warn('Logo failed to load (logo.png).'); resolve(); };
-                    img.src = 'logo.png'; // Place logo.png beside index.html
-                });
+                    }
+                    console.error('Logo image not found in any candidate path:', candidatePaths.join(', '));
+                })();
                 return logoPromise;
             }
             loadLogo();
