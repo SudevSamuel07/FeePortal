@@ -5,7 +5,7 @@ This project is a simple, secure, and serverless web application designed to hel
 
 To allow for public demonstration and testing, the application also includes a Guest Mode. This feature allows any visitor to try the application's functionality without accessing or interfering with the private administrative data, as all guest entries are stored in a separate, temporary collection.
 
-
+✨ Key Features
 Secure Admin Login: The main application is protected by a username and password to ensure that all financial data remains private and secure.
 
 Separate Guest Mode: Visitors can explore the application's features in a sandboxed environment. Guest data is completely separate from admin data.
