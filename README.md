@@ -1,5 +1,4 @@
-   Fee Management Portal  
-
+Fee Management Portal  
 
 📖 Overview
 This project is a simple, secure, and serverless web application designed to help manage student fee payments for the Emmanuel School of Theology. This tool allows a designated administrator to enter payment details, save them permanently to a private cloud database, and generate a professional PDF receipt modeled after the official school receipt.
