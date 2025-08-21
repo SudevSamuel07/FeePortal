@@ -1,0 +1,10 @@
+[build]
+  # No build command for a static site; set the publish directory to where your index.html lives
+  publish = "Main"
+  command = ""
+
+# Useful redirect so single-page navigation works and Netlify serves index.html for routes
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
