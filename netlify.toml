@@ -1,5 +1,5 @@
 [build]
-  # No build command for a static site; set the publish directory to where your.... index.html lives
+  # No build command for a static site; set the publish directory to where your... index.html lives
   publish = "Main"
   command = ""
 
