@@ -352,6 +352,13 @@
             const studentCollection = collection(db, collectionPath);
 
             // --- Configure UI based on Role ---
+            // Forwarding activateTab: queue requests until the real implementation is attached later
+            let __queuedTabs = [];
+            if (typeof activateTab !== 'function') {
+                // placeholder that queues requests
+                function activateTab(id) { __queuedTabs.push(id); }
+            }
+
             const homeTabItem = document.getElementById('home-tab-item');
             const actionHeaders = document.querySelectorAll('.action-header');
             
@@ -592,12 +599,11 @@
                 });
             }
 
-            const tabs = document.querySelectorAll('[role="tab"]');
+            const tabButtons = Array.from(document.querySelectorAll('[role="tab"]'));
             const tabContents = document.querySelectorAll('.tab-content');
-            
-            // ADDED: New function to handle tab switching cleanly
+
             function activateTab(tabId) {
-                tabs.forEach(t => {
+                tabButtons.forEach(t => {
                     t.setAttribute('aria-selected', 'false');
                     t.classList.remove('border-blue-600', 'text-blue-600');
                     t.classList.add('border-transparent', 'hover:text-gray-600', 'hover:border-gray-300');
@@ -605,17 +611,77 @@
                 tabContents.forEach(c => c.classList.remove('active'));
 
                 const tabToActivate = document.getElementById(tabId);
-                if(tabToActivate) {
-                    tabToActivate.setAttribute('aria-selected', 'true');
-                    tabToActivate.classList.add('border-blue-600', 'text-blue-600');
-                    tabToActivate.classList.remove('border-transparent', 'hover:text-gray-600', 'hover:border-gray-300');
-                    document.getElementById(tabToActivate.getAttribute('aria-controls')).classList.add('active');
-                }
+                if (!tabToActivate) return;
+                tabToActivate.setAttribute('aria-selected', 'true');
+                tabToActivate.classList.add('border-blue-600', 'text-blue-600');
+                tabToActivate.classList.remove('border-transparent', 'hover:text-gray-600', 'hover:border-gray-300');
+                const panelId = tabToActivate.getAttribute('aria-controls');
+                const panel = document.getElementById(panelId);
+                if (panel) panel.classList.add('active');
             }
-        
-            tabs.forEach(tab => {
-                tab.addEventListener('click', () => activateTab(tab.id));
+
+            // Attach click + keyboard handlers to each tab button and its parent <li> (defensive)
+            tabButtons.forEach(btn => {
+                try {
+                    btn.style.cursor = 'pointer';
+                } catch {}
+                if (!btn.hasAttribute('tabindex')) btn.setAttribute('tabindex', '0');
+                btn.addEventListener('click', (e) => { e.preventDefault(); activateTab(btn.id); });
+                btn.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activateTab(btn.id); } });
+
+                // Also listen on parent <li> in case the button is small or styling intercepts clicks
+                const li = btn.closest('li');
+                if (li) {
+                    try { li.style.cursor = 'pointer'; } catch {}
+                    li.addEventListener('click', (e) => {
+                        // If click originates from the li (not the inner controls), activate
+                        if (e.target === li || e.target === btn) activateTab(btn.id);
+                    });
+                }
             });
+
+            // Initialize: pick the first tab that is visible (not display:none) or the one marked aria-selected
+            const initiallySelected = tabButtons.find(b => b.getAttribute('aria-selected') === 'true');
+            if (initiallySelected && window.getComputedStyle(initiallySelected.closest('li') || initiallySelected).display !== 'none') {
+                activateTab(initiallySelected.id);
+            } else {
+                const firstVisible = tabButtons.find(b => (b.closest('li') ? window.getComputedStyle(b.closest('li')).display !== 'none' : true));
+                if (firstVisible) activateTab(firstVisible.id);
+            }
+
+            // === Defensive fallback: listen on the tab list container to catch clicks that fail to bubble to the button ===
+            const tabList = document.getElementById('myTab');
+            if (tabList) {
+                // ensure the tab list and children accept pointer events and are above overlays
+                try { tabList.style.pointerEvents = 'auto'; tabList.style.zIndex = '50'; } catch(e){}
+                tabList.addEventListener('click', (e) => {
+                    // find closest button with role="tab"
+                    const btn = e.target.closest && e.target.closest('[role="tab"]');
+                    if (btn) {
+                        console.log('Tab list click -> activating', btn.id);
+                        activateTab(btn.id);
+                    } else {
+                        // If click landed on LI, try to find a button inside
+                        const li = e.target.closest && e.target.closest('li');
+                        if (li) {
+                            const inner = li.querySelector && li.querySelector('[role="tab"]');
+                            if (inner) { console.log('Tab list LI click -> activating', inner.id); activateTab(inner.id); }
+                        }
+                    }
+                });
+            }
+
+            // If any activateTab calls were queued before the real implementation was added below,
+            // they'll be flushed after the real function replaces the placeholder. We flush later.
+            // Flush queued activateTab calls if any were stored earlier
+            try {
+                if (Array.isArray(window.__queuedTabs) && window.__queuedTabs.length) {
+                    window.__queuedTabs.forEach(id => {
+                        try { activateTab(id); } catch(e){}
+                    });
+                    window.__queuedTabs = [];
+                }
+            } catch(e) { /* ignore */ }
             
             const alertModal = document.getElementById('alertModal');
             const alertTitle = document.getElementById('alertTitle');
