@@ -91,9 +91,7 @@
                 <li id="home-tab-item" class="mr-2" role="presentation">
                     <button class="inline-block p-4 border-b-2 rounded-t-lg transition-colors duration-150" id="home-tab" type="button" role="tab" aria-controls="home" aria-selected="true">Add New Record</button>
                 </li>
-                <li class="mr-2" role="presentation">
-                    <button class="inline-block p-4 border-b-2 rounded-t-lg transition-colors duration-150" id="history-tab" type="button" role="tab" aria-controls="history" aria-selected="false">Payment History</button>
-                </li>
+                <!-- Payment History tab removed -->
             </ul>
         </div>
 
@@ -134,37 +132,7 @@
                 </div>
             </div>
 
-            <div id="history" class="tab-content" role="tabpanel" aria-labelledby="history-tab">
-                <div class="bg-white p-6 md:p-8 rounded-xl shadow-md ring-1 ring-black/5">
-                    <h2 class="text-xl font-semibold mb-4">Payment History</h2>
-                    <div id="loader-container" class="flex justify-center items-center h-48">
-                        <svg class="h-10 w-10 animate-spin text-blue-600" viewBox="0 0 24 24" fill="none">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                        </svg>
-                    </div>
-                    <div id="history-table-container" class="overflow-x-auto hidden">
-                        <table class="w-full text-sm text-left text-gray-500">
-                            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-                                <tr>
-                                    <th scope="col" class="px-6 py-3">Date</th>
-                                    <th scope="col" class="px-6 py-3">Receipt No.</th>
-                                    <th scope="col" class="px-6 py-3">Student Name</th>
-                                    <th scope="col" class="px-6 py-3">Amount</th>
-                                    <th scope="col" class="px-6 py-3">Towards</th>
-                                    <th scope="col" class="px-6 py-3 action-header">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="historyTableBody">
-                                </tbody>
-                        </table>
-                        <div id="no-records" class="text-center py-10 hidden">
-                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="mx-auto mb-2 h-10 w-10 text-gray-300"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5l8.955 5.373a2.25 2.25 0 002.29 0L23 7.5M4.5 19.5h15a1.5 1.5 0 001.5-1.5v-9a1.5 1.5 0 00-1.5-1.5h-15A1.5 1.5 0 003 9v9a1.5 1.5 0 001.5 1.5z" /></svg>
-                            <p class="text-gray-500">No records found.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <!-- Payment History UI removed -->
         </div>
     </div>
 
@@ -352,24 +320,12 @@
             const studentCollection = collection(db, collectionPath);
 
             // --- Configure UI based on Role ---
-            // Forwarding activateTab: queue requests until the real implementation is attached later
-            let __queuedTabs = [];
-            if (typeof activateTab !== 'function') {
-                // placeholder that queues requests
-                function activateTab(id) { __queuedTabs.push(id); }
-            }
-
-            const homeTabItem = document.getElementById('home-tab-item');
+            // Keep the Add New Record form available for admins and hide action controls for guests
             const actionHeaders = document.querySelectorAll('.action-header');
-            
             if (isAdmin) {
-                homeTabItem.style.display = 'block'; // Show "Add New Record" tab
-                actionHeaders.forEach(h => h.style.display = 'table-cell'); // Show "Action" column
-                activateTab('home-tab'); 
-            } else { // This is a Guest
-                homeTabItem.style.display = 'none'; // Hide "Add New Record" tab
-                actionHeaders.forEach(h => h.style.display = 'none'); // Hide "Action" column
-                activateTab('history-tab'); 
+                actionHeaders.forEach(h => h.style.display = 'table-cell');
+            } else {
+                actionHeaders.forEach(h => h.style.display = 'none');
             }
 
             // The rest of your application logic now lives inside here
@@ -377,10 +333,6 @@
             
             // --- UI Elements ---
             const feeForm = document.getElementById('feeForm');
-            const historyTableBody = document.getElementById('historyTableBody');
-            const loader = document.getElementById('loader-container');
-            const historyContainer = document.getElementById('history-table-container');
-            const noRecordsMessage = document.getElementById('no-records');
             let logoDataUrl = null;
             let circularLogoDataUrl = null;
             let logoPromise = null;
@@ -551,44 +503,7 @@
                 });
             }
 
-            onSnapshot(studentCollection, (snapshot) => {
-                loader.style.display = 'none';
-                historyContainer.classList.remove('hidden');
-
-                if (snapshot.empty) {
-                    historyTableBody.innerHTML = '';
-                    noRecordsMessage.classList.remove('hidden');
-                    return;
-                }
-
-                noRecordsMessage.classList.add('hidden');
-                let html = '';
-                const docs = snapshot.docs.sort((a, b) => (b.data().createdAt?.seconds || 0) - (a.data().createdAt?.seconds || 0));
-
-                docs.forEach(docSnap => {
-                    const student = docSnap.data();
-                    const date = student.feeDate ? student.feeDate.split('-').reverse().join('/') : (student.createdAt ? new Date(student.createdAt.seconds * 1000).toLocaleDateString('en-GB') : 'N/A');
-                    // ADDED: Conditionally show delete button for admin
-                    const deleteButtonHtml = isAdmin ? `<td class="px-6 py-4"><button data-id="${docSnap.id}" class="delete-btn font-medium text-red-600 hover:underline">Delete</button></td>` : '';
-                    html += `
-                        <tr class="bg-white border-b hover:bg-gray-50">
-                            <td class="px-6 py-4">${date}</td>
-                            <td class="px-6 py-4">${student.receiptNo || 'N/A'}</td>
-                            <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">${student.name}</th>
-                            <td class="px-6 py-4 text-green-600 font-medium">₹${student.paid ? Number(student.paid).toFixed(2) : '0.00'}</td>
-                            <td class="px-6 py-4">${student.towards || 'N/A'}</td>
-                            ${deleteButtonHtml}
-                        </tr>
-                    `;
-                });
-                historyTableBody.innerHTML = html;
-            }, (error) => {
-                console.error("Error fetching history:", error);
-                loader.style.display = 'none';
-                historyContainer.classList.add('hidden');
-                noRecordsMessage.textContent = "Error loading data. Please check your connection.";
-                noRecordsMessage.classList.remove('hidden');
-            });
+            // No real-time history rendering required after removal of Payment History UI.
 
             if (isAdmin) { // Only admins can delete
                 historyTableBody.addEventListener('click', (e) => {
