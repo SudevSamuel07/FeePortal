@@ -128,3 +128,4 @@ The default deployment settings will work perfectly. Click "Deploy site".
 
 Netlify will provide you with a live URL for your application.
 
+New changes added
