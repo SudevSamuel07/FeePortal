@@ -1,4 +1,4 @@
-             Fee Management Portal
+ Fee Management Portal
 
 📖 Overview
 
